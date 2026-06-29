@@ -1,12 +1,14 @@
 export interface Skill {
   id?: string;
   name: string;
+  level?: string;
   type: "PDMG" | "MDMG" | "Support" | "Passive";
   percentage: string;
   cooldown: string;
   castTime: string;
   spCost: string;
   description: string;
+  alternativeDescription?: string;
   job?: string; // Filterable job class (e.g. Archer, Swordsman, Mage, Acolyte, Thief, Merchant, Bard/Dancer)
   imageBase64?: string;
   createdAt?: number;

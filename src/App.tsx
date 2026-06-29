@@ -24,7 +24,9 @@ import {
   Swords, BookOpen, MapPin, CreditCard, Skull, Calculator, 
   Lock, Unlock, LogOut, Plus, Edit2, Trash2, Search, Filter, 
   Sparkles, Upload, RefreshCw, Clock, ShieldAlert, X, AlertTriangle, 
-  User, Eye, HelpCircle, Flame, CheckCircle, Sliders, Play
+  User, Eye, HelpCircle, Flame, CheckCircle, Sliders, Play,
+  Shield, Target, Coins, Hammer, Music, Scroll, Heart, Download, 
+  Compass, Map, Crown, Scissors
 } from "lucide-react";
 
 const ELEMENTS = ["None", "Wind", "Earth", "Fire", "Water", "Poison", "Holy", "Shadow", "Ghost", "Undead"];
@@ -75,6 +77,106 @@ const ELEMENT_MATRIX: Record<string, Record<string, string>> = {
   }
 };
 
+const getSkillJobIcon = (job?: string) => {
+  const j = (job || "Novice / General").toLowerCase();
+  if (j.includes("swordsman") || j.includes("knight")) return <Swords className="w-7 h-7 text-[#C19A6B]" />;
+  if (j.includes("mage") || j.includes("wizard")) return <Sparkles className="w-7 h-7 text-cyan-400" />;
+  if (j.includes("acolyte") || j.includes("priest")) return <Heart className="w-7 h-7 text-rose-400" />;
+  if (j.includes("archer") || j.includes("hunter")) return <Target className="w-7 h-7 text-emerald-400" />;
+  if (j.includes("thief") || j.includes("assassin")) return <Eye className="w-7 h-7 text-purple-400" />;
+  if (j.includes("merchant") || j.includes("blacksmith")) return <Hammer className="w-7 h-7 text-amber-500" />;
+  if (j.includes("bard") || j.includes("dancer")) return <Music className="w-7 h-7 text-pink-400" />;
+  return <BookOpen className="w-7 h-7 text-neutral-400" />;
+};
+
+const getCardSlotIcon = (slot?: string) => {
+  const s = (slot || "Card").toLowerCase();
+  if (s.includes("weapon")) return <Swords className="w-8 h-8 text-[#C19A6B]/80" />;
+  if (s.includes("armor") || s.includes("shield")) return <Shield className="w-8 h-8 text-blue-400/80" />;
+  if (s.includes("headwear") || s.includes("headgear") || s.includes("helmet")) return <Crown className="w-8 h-8 text-yellow-400/80" />;
+  if (s.includes("shoes") || s.includes("footwear")) return <Compass className="w-8 h-8 text-emerald-400/80" />;
+  if (s.includes("garment") || s.includes("cloak")) return <Scroll className="w-8 h-8 text-amber-500/80" />;
+  if (s.includes("accessory")) return <Sparkles className="w-8 h-8 text-pink-400/80" />;
+  return <CreditCard className="w-8 h-8 text-neutral-400" />;
+};
+
+const cropImageHelper = (
+  imageBase64: string,
+  xPercent: number,
+  yPercent: number,
+  sizePercent: number
+): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.src = imageBase64;
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = 120;
+      canvas.height = 120;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        reject(new Error("Could not get canvas context"));
+        return;
+      }
+      const srcX = (xPercent / 100) * img.width;
+      const srcY = (yPercent / 100) * img.height;
+      const srcSize = (sizePercent / 100) * Math.min(img.width, img.height);
+      ctx.drawImage(img, srcX, srcY, srcSize, srcSize, 0, 0, 120, 120);
+      resolve(canvas.toDataURL("image/png"));
+    };
+    img.onerror = (err) => reject(err);
+  });
+};
+
+const autoCropSkillIcon = (imageBase64: string): Promise<string> => {
+  return cropImageHelper(imageBase64, 4.5, 3.5, 23);
+};
+
+const CropPreviewHelper = ({
+  src,
+  x,
+  y,
+  size,
+  onPreviewGenerated,
+}: {
+  src: string;
+  x: number;
+  y: number;
+  size: number;
+  onPreviewGenerated: (b64: string) => void;
+}) => {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  useEffect(() => {
+    if (!src) return;
+    const img = new Image();
+    img.src = src;
+    img.onload = () => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+      ctx.clearRect(0, 0, 120, 120);
+
+      const srcX = (x / 100) * img.width;
+      const srcY = (y / 100) * img.height;
+      const srcSize = (size / 100) * Math.min(img.width, img.height);
+
+      ctx.drawImage(img, srcX, srcY, srcSize, srcSize, 0, 0, 120, 120);
+      onPreviewGenerated(canvas.toDataURL("image/png"));
+    };
+  }, [src, x, y, size, onPreviewGenerated]);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      width={120}
+      height={120}
+      className="w-16 h-16 bg-[#000] border border-[#C19A6B] object-cover"
+    />
+  );
+};
+
 export default function App() {
   // Navigation State
   const [activeTab, setActiveTab] = useState<"skills" | "patch" | "maps" | "cards" | "mvp" | "calc" | "elements">("skills");
@@ -96,6 +198,39 @@ export default function App() {
   const [selectedAtkElement, setSelectedAtkElement] = useState<string>("Fire");
   const [selectedDefElement, setSelectedDefElement] = useState<string>("Earth");
 
+  // PWA Install State
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [isInstallable, setIsInstallable] = useState<boolean>(false);
+
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setIsInstallable(true);
+      console.log("ROOC Archive PWA is ready to install!");
+    };
+
+    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+
+    // If already in standalone mode, hide install button
+    if (window.matchMedia("(display-mode: standalone)").matches) {
+      setIsInstallable(false);
+    }
+
+    return () => {
+      window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+    };
+  }, []);
+
+  const handleInstallApp = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    console.log(`PWA installation outcome: ${outcome}`);
+    setDeferredPrompt(null);
+    setIsInstallable(false);
+  };
+
   // Live Firestore Databases
   const [skills, setSkills] = useState<Skill[]>([]);
   const [patches, setPatches] = useState<Patch[]>([]);
@@ -110,15 +245,26 @@ export default function App() {
 
   // Form Inputs - Skill
   const [skillName, setSkillName] = useState("");
+  const [skillLevel, setSkillLevel] = useState("");
   const [skillType, setSkillType] = useState<"PDMG" | "MDMG" | "Support" | "Passive">("PDMG");
   const [skillPercentage, setSkillPercentage] = useState("");
   const [skillCooldown, setSkillCooldown] = useState("");
   const [skillCastTime, setSkillCastTime] = useState("");
   const [skillSpCost, setSkillSpCost] = useState("");
   const [skillDescription, setSkillDescription] = useState("");
+  const [skillAltDescription, setSkillAltDescription] = useState("");
   const [skillJob, setSkillJob] = useState("Swordsman");
   const [skillImage, setSkillImage] = useState("");
   const [jobFilter, setJobFilter] = useState("All");
+
+  // Cropping Tool States
+  const [showCropModal, setShowCropModal] = useState(false);
+  const [cropSourceImage, setCropSourceImage] = useState("");
+  const [cropX, setCropX] = useState(4.5);
+  const [cropY, setCropY] = useState(3.5);
+  const [cropSize, setCropSize] = useState(23);
+  const [cropCallback, setCropCallback] = useState<((croppedB64: string) => void) | null>(null);
+  const [cropLivePreview, setCropLivePreview] = useState("");
 
   // Inline calculator state for skill damage calculations
   const [skillAtkInput, setSkillAtkInput] = useState<Record<string, number>>({});
@@ -335,13 +481,23 @@ export default function App() {
         const payload = result.data;
         if (type === "skill") {
           if (payload.name) setSkillName(payload.name);
+          if (payload.level) setSkillLevel(payload.level);
           if (payload.type) setSkillType(payload.type);
           if (payload.percentage) setSkillPercentage(payload.percentage);
           if (payload.cooldown) setSkillCooldown(payload.cooldown);
           if (payload.castTime) setSkillCastTime(payload.castTime);
           if (payload.spCost) setSkillSpCost(payload.spCost);
           if (payload.description) setSkillDescription(payload.description);
-          setSkillImage(scannedImagePreview); // Auto assign scanned screenshot to the image field
+          if (payload.alternativeDescription) setSkillAltDescription(payload.alternativeDescription);
+          
+          // Auto-crop skill icon from screenshot!
+          try {
+            const cropped = await autoCropSkillIcon(scannedImagePreview);
+            setSkillImage(cropped);
+          } catch (cropErr) {
+            console.warn("Auto-crop failed, using full image:", cropErr);
+            setSkillImage(scannedImagePreview);
+          }
         } else {
           if (payload.name) setCardName(payload.name);
           if (payload.slot) setCardSlot(payload.slot);
@@ -370,7 +526,7 @@ export default function App() {
     setScannedImagePreview(null);
     
     // Clear all states
-    setSkillName(""); setSkillType("PDMG"); setSkillPercentage(""); setSkillCooldown(""); setSkillCastTime(""); setSkillSpCost(""); setSkillDescription(""); setSkillJob("Swordsman"); setSkillImage("");
+    setSkillName(""); setSkillLevel(""); setSkillType("PDMG"); setSkillPercentage(""); setSkillCooldown(""); setSkillCastTime(""); setSkillSpCost(""); setSkillDescription(""); setSkillAltDescription(""); setSkillJob("Swordsman"); setSkillImage("");
     setPatchTitle(""); setPatchDate(new Date().toISOString().split('T')[0]); setPatchContent(""); setPatchTags(""); setPatchAuthor("ROOC Admin"); setPatchImage("");
     setMapName(""); setMapMinLevel(1); setMapMonsters(""); setMapDescription(""); setMapImage("");
     setCardName(""); setCardSlot("Weapon"); setCardEffect(""); setCardStats(""); setCardSourceMonster(""); setCardLvl5Effect(""); setCardLvl10Effect(""); setCardLvl15Effect(""); setCardImage("");
@@ -388,12 +544,14 @@ export default function App() {
     if (type === "skills") {
       const sk = item as Skill;
       setSkillName(sk.name);
+      setSkillLevel(sk.level || "");
       setSkillType(sk.type);
       setSkillPercentage(sk.percentage);
       setSkillCooldown(sk.cooldown);
       setSkillCastTime(sk.castTime);
       setSkillSpCost(sk.spCost);
       setSkillDescription(sk.description);
+      setSkillAltDescription(sk.alternativeDescription || "");
       setSkillJob(sk.job || "Swordsman");
       setSkillImage(sk.imageBase64 || "");
     } else if (type === "patch") {
@@ -453,12 +611,14 @@ export default function App() {
       if (formType === "skills") {
         const payload: Skill = {
           name: skillName,
+          level: skillLevel || undefined,
           type: skillType,
           percentage: skillPercentage || "100%",
           cooldown: skillCooldown || "None",
           castTime: skillCastTime || "Instant",
           spCost: skillSpCost || "0 SP",
           description: skillDescription,
+          alternativeDescription: skillAltDescription || undefined,
           job: skillJob || "Swordsman",
           imageBase64: skillImage || undefined,
           createdAt: Date.now()
@@ -729,8 +889,20 @@ export default function App() {
               })}
             </nav>
 
-            {/* Right Action: Admin Login Lock */}
-            <div className="flex items-center gap-2">
+            {/* Right Action: Admin Login Lock & PWA Install */}
+            <div className="flex items-center gap-3">
+              {isInstallable && (
+                <button
+                  onClick={handleInstallApp}
+                  className="flex items-center gap-1.5 text-[11px] text-[#0F0F0F] bg-[#C19A6B] hover:bg-[#E5C294] transition duration-200 py-2 px-3 sm:px-4 border border-[#C19A6B] font-bold uppercase tracking-widest cursor-pointer shadow-[0_0_10px_rgba(193,154,107,0.2)] animate-pulse"
+                  title="Install Aplikasi ke HP / Desktop"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Install App</span>
+                  <span className="sm:hidden">Install</span>
+                </button>
+              )}
+
               {!isAdmin ? (
                 <button
                   id="btn-admin-login"
@@ -978,12 +1150,21 @@ export default function App() {
                           className="w-16 h-16 rounded-none object-cover bg-[#0F0F0F] border border-[#2A2A2A] shrink-0 shadow-md"
                         />
                       ) : (
-                        <div className="w-16 h-16 rounded-none bg-[#0F0F0F] flex items-center justify-center text-[#C19A6B]/60 shrink-0 border border-[#2A2A2A]">
-                          <Swords className="w-7 h-7" />
+                        <div className="w-16 h-16 rounded-none bg-[#0F0F0F] flex items-center justify-center shrink-0 border border-[#2A2A2A]">
+                          {getSkillJobIcon(sk.job)}
                         </div>
                       )}
                       <div className="min-w-0 flex-1">
-                        <h3 className="font-serif italic font-bold text-[#F0F0E8] group-hover:text-[#C19A6B] text-lg leading-tight truncate transition duration-200">{sk.name}</h3>
+                        <div className="flex items-baseline gap-2 flex-wrap">
+                          <h3 className="font-serif italic font-bold text-[#F0F0E8] group-hover:text-[#C19A6B] text-lg leading-tight truncate transition duration-200">
+                            {sk.name}
+                          </h3>
+                          {sk.level && (
+                            <span className="text-[10px] bg-[#C19A6B] text-[#0F0F0F] font-bold px-1.5 py-0.5 rounded-none font-mono">
+                              {sk.level}
+                            </span>
+                          )}
+                        </div>
                         <div className="grid grid-cols-2 gap-x-3 gap-y-1 mt-2.5 text-[11px] text-[#F0F0E8]/50 font-mono">
                           <div>Mult: <span className="text-[#C19A6B] font-semibold">{sk.percentage}</span></div>
                           <div>SP Cost: <span className="text-[#C19A6B] font-semibold">{sk.spCost}</span></div>
@@ -992,12 +1173,17 @@ export default function App() {
                         </div>
                       </div>
                     </div>
-
+ 
                     {/* Description */}
-                    <div className="mt-5 pt-4 border-t border-[#2A2A2A] flex-1">
-                      <p className="text-xs text-[#F0F0E8]/70 leading-relaxed line-clamp-3">
+                    <div className="mt-5 pt-4 border-t border-[#2A2A2A] flex-1 space-y-2">
+                      <p className="text-xs text-[#F0F0E8]/70 leading-relaxed">
                         {sk.description || "Tidak ada deskripsi yang tersedia untuk skill ini."}
                       </p>
+                      {sk.alternativeDescription && (
+                        <p className="text-[11px] text-[#F0F0E8]/40 leading-relaxed italic border-l-2 border-[#2A2A2A] pl-2">
+                          {sk.alternativeDescription}
+                        </p>
+                      )}
                     </div>
 
                     {/* Interactive Inline Damage Calculator */}
@@ -1079,13 +1265,19 @@ export default function App() {
                     )}
 
                     <div className="flex flex-col md:flex-row gap-6 items-start">
-                      {pt.imageBase64 && (
+                      {pt.imageBase64 ? (
                         <img 
                           src={pt.imageBase64} 
                           alt={pt.title}
                           referrerPolicy="no-referrer"
                           className="w-full md:w-56 h-36 rounded-none object-cover bg-[#0F0F0F] border border-[#2A2A2A] shrink-0"
                         />
+                      ) : (
+                        <div className="w-full md:w-56 h-36 rounded-none bg-[#0F0F0F] flex flex-col items-center justify-center text-[#C19A6B]/50 shrink-0 border border-[#2A2A2A] relative overflow-hidden group-hover:border-[#C19A6B]/50 transition-all duration-300">
+                          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(193,154,107,0.1)_0%,transparent_70%)] opacity-50" />
+                          <Scroll className="w-12 h-12 mb-1 text-[#C19A6B]/60" />
+                          <span className="text-[9px] font-mono tracking-widest text-[#F0F0E8]/40 uppercase">Patch Update</span>
+                        </div>
                       )}
                       
                       <div className="flex-1">
@@ -1161,8 +1353,10 @@ export default function App() {
                           className="w-full h-full object-cover opacity-60 group-hover:scale-105 transition-all duration-500"
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center text-[#F0F0E8]/30 font-mono text-sm uppercase">
-                          No map image
+                        <div className="w-full h-full bg-[#0F0F0F] flex flex-col items-center justify-center text-[#C19A6B]/50 relative overflow-hidden group-hover:scale-105 transition-all duration-500">
+                          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(193,154,107,0.1)_0%,transparent_70%)]" />
+                          <Map className="w-12 h-12 mb-2 text-[#C19A6B]/60 animate-pulse" />
+                          <span className="text-[10px] font-mono tracking-widest text-[#F0F0E8]/40 uppercase">Ragnarok World Map</span>
                         </div>
                       )}
                       {/* Floating level badge */}
@@ -1247,8 +1441,10 @@ export default function App() {
                             className="w-16 h-24 rounded-none object-cover bg-[#0F0F0F] border border-[#2A2A2A] shrink-0"
                           />
                         ) : (
-                          <div className="w-16 h-24 rounded-none bg-[#0F0F0F] flex items-center justify-center text-[#C19A6B]/50 shrink-0 border border-[#2A2A2A]">
-                            <CreditCard className="w-8 h-8" />
+                          <div className="w-16 h-24 rounded-none bg-[#0F0F0F] flex flex-col items-center justify-center shrink-0 border border-[#2A2A2A] relative overflow-hidden">
+                            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(193,154,107,0.15)_0%,transparent_80%)]" />
+                            <div className="z-10">{getCardSlotIcon(cd.slot)}</div>
+                            <span className="text-[7px] font-mono tracking-widest text-[#F0F0E8]/30 uppercase mt-1 z-10">ROOC Card</span>
                           </div>
                         )}
                         
@@ -1338,8 +1534,24 @@ export default function App() {
                             className="w-full h-full object-cover opacity-80"
                           />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center text-[#C19A6B]">
-                            <Skull className="w-10 h-10 text-[#C19A6B]/50" />
+                          <div className="w-full h-full bg-[#0F0F0F] flex flex-col items-center justify-center text-[#C19A6B]/50 relative overflow-hidden group-hover:scale-105 transition-all duration-500">
+                            <div className={`absolute inset-0 opacity-20 bg-gradient-to-t ${
+                              boss.element === "Fire" ? "from-red-500 via-orange-500/10 to-transparent" :
+                              boss.element === "Water" ? "from-blue-500 via-cyan-500/10 to-transparent" :
+                              boss.element === "Earth" ? "from-amber-600 via-yellow-600/10 to-transparent" :
+                              boss.element === "Wind" ? "from-cyan-400 via-teal-400/10 to-transparent" :
+                              boss.element === "Shadow" || boss.element === "Undead" ? "from-purple-800 via-fuchsia-900/15 to-transparent" :
+                              boss.element === "Holy" ? "from-yellow-400 via-amber-300/10 to-transparent" :
+                              "from-[#C19A6B]/40 via-transparent to-transparent"
+                            }`} />
+                            <Skull className={`w-12 h-12 mb-1 z-10 ${
+                              boss.element === "Fire" ? "text-red-400/60" :
+                              boss.element === "Water" ? "text-blue-400/60" :
+                              boss.element === "Holy" ? "text-yellow-400/60" :
+                              boss.element === "Shadow" || boss.element === "Undead" ? "text-purple-400/60" :
+                              "text-[#C19A6B]/60"
+                            }`} />
+                            <span className="text-[9px] font-mono tracking-widest text-[#F0F0E8]/40 uppercase z-10">{boss.element || "Unknown"} Element</span>
                           </div>
                         )}
                         <div className="absolute top-3 left-3 flex gap-1.5">
@@ -1976,7 +2188,7 @@ export default function App() {
               {/* 1. Skill Form Fields */}
               {formType === "skills" && (
                 <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div>
                       <label className="block text-xs font-bold uppercase tracking-widest text-[#F0F0E8]/40 mb-1.5 font-mono">Nama Skill</label>
                       <input
@@ -1985,6 +2197,16 @@ export default function App() {
                         value={skillName}
                         onChange={(e) => setSkillName(e.target.value)}
                         placeholder="Contoh: Bowling Bash"
+                        className="w-full bg-[#0F0F0F] text-[#F0F0E8] border border-[#2A2A2A] rounded-none px-3 py-2.5 text-sm font-mono focus:outline-none focus:border-[#C19A6B]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-widest text-[#F0F0E8]/40 mb-1.5 font-mono">Level Skill</label>
+                      <input
+                        type="text"
+                        value={skillLevel}
+                        onChange={(e) => setSkillLevel(e.target.value)}
+                        placeholder="Contoh: Lv.10 atau Max"
                         className="w-full bg-[#0F0F0F] text-[#F0F0E8] border border-[#2A2A2A] rounded-none px-3 py-2.5 text-sm font-mono focus:outline-none focus:border-[#C19A6B]"
                       />
                     </div>
@@ -2074,22 +2296,56 @@ export default function App() {
                     />
                   </div>
 
-                  {/* Standard Image Upload */}
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-widest text-[#F0F0E8]/40 mb-1.5 font-mono">Deskripsi Alternatif (Font Abu-Abu / Catatan Tambahan)</label>
+                    <textarea
+                      value={skillAltDescription}
+                      onChange={(e) => setSkillAltDescription(e.target.value)}
+                      placeholder="Masukkan alternatif deskripsi atau catatan mekanik tambahan (biasanya tertulis dalam font abu-abu kecil)..."
+                      rows={3}
+                      className="w-full bg-[#0F0F0F] text-[#F0F0E8] border border-[#2A2A2A] rounded-none px-3 py-2.5 text-sm font-mono focus:outline-none focus:border-[#C19A6B]"
+                    />
+                  </div>
+
+                  {/* Standard Image Upload with Manual Crop Action */}
                   <div>
                     <label className="block text-xs font-bold uppercase tracking-widest text-[#F0F0E8]/40 mb-1.5 font-mono">Unggah Icon / Gambar Skill (Base64)</label>
-                    <div className="flex gap-4 items-center">
+                    <div className="flex gap-4 items-center flex-wrap">
                       <input
                         type="file"
                         accept="image/*"
-                        onChange={(e) => handleImageUpload(e, setSkillImage)}
+                        onChange={(e) => handleImageUpload(e, (b64) => {
+                          setSkillImage(b64);
+                          setCropSourceImage(b64);
+                          setCropCallback(() => (croppedB64: string) => setSkillImage(croppedB64));
+                          setCropX(4.5);
+                          setCropY(3.5);
+                          setCropSize(23);
+                        })}
                         className="text-xs text-[#F0F0E8]/70"
                       />
                       {skillImage && (
-                        <img 
-                          src={skillImage} 
-                          alt="preview" 
-                          className="w-12 h-12 object-cover rounded-none border border-[#C19A6B]"
-                        />
+                        <div className="flex items-center gap-3 bg-[#0F0F0F] p-2 border border-[#2A2A2A]">
+                          <img 
+                            src={skillImage} 
+                            alt="preview" 
+                            className="w-12 h-12 object-cover rounded-none border border-[#C19A6B]"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setCropSourceImage(skillImage);
+                              setCropCallback(() => (croppedB64: string) => setSkillImage(croppedB64));
+                              setCropX(0);
+                              setCropY(0);
+                              setCropSize(100);
+                              setShowCropModal(true);
+                            }}
+                            className="bg-[#2A2A2A] hover:bg-[#333] text-[#C19A6B] border border-[#2A2A2A] px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider transition"
+                          >
+                            Pangkas (Crop) Icon
+                          </button>
+                        </div>
                       )}
                     </div>
                   </div>
@@ -2533,6 +2789,145 @@ export default function App() {
               </div>
 
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ==================== CROPPING OVERLAY MODAL ==================== */}
+      {showCropModal && (
+        <div className="fixed inset-0 bg-[#0F0F0F]/90 backdrop-blur-sm flex items-center justify-center z-[1000] p-4">
+          <div className="bg-[#1A1A1A] border border-[#C19A6B] max-w-lg w-full p-6 shadow-2xl relative space-y-6">
+            <div className="flex justify-between items-center border-b border-[#2A2A2A] pb-3">
+              <h3 className="font-serif italic font-bold text-lg text-[#C19A6B] flex items-center gap-2">
+                <Scissors className="w-5 h-5 text-[#C19A6B]" />
+                Pangkas (Crop) Icon Skill
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowCropModal(false)}
+                className="text-[#F0F0E8]/40 hover:text-[#F0F0E8] text-sm font-mono cursor-pointer"
+              >
+                ✕ Close
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <p className="text-xs text-[#F0F0E8]/60 font-mono leading-relaxed">
+                Sesuaikan area pemotongan untuk mengekstrak icon skill berukuran 120x120 piksel secara presisi dari gambar asli Anda.
+              </p>
+
+              {/* Crop Source Preview and Selection rectangle */}
+              <div className="relative border border-[#2A2A2A] bg-black p-2 flex justify-center items-center overflow-hidden h-64 select-none">
+                <img
+                  id="crop-img-source"
+                  src={cropSourceImage}
+                  alt="Source"
+                  className="max-h-full max-w-full object-contain"
+                />
+                {/* Visual crop box selector overlay */}
+                <div
+                  className="absolute border-2 border-dashed border-[#C19A6B] bg-[#C19A6B]/10 pointer-events-none transition-all duration-75"
+                  style={{
+                    left: `${cropX}%`,
+                    top: `${cropY}%`,
+                    width: `${cropSize}%`,
+                    height: `${cropSize}%`,
+                  }}
+                />
+              </div>
+
+              {/* Sliders */}
+              <div className="space-y-3 font-mono text-xs">
+                <div>
+                  <div className="flex justify-between text-[#F0F0E8]/50 mb-1.5">
+                    <span>Posisi Horizontal (X)</span>
+                    <span className="text-[#C19A6B]">{cropX}%</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    step="0.5"
+                    value={cropX}
+                    onChange={(e) => setCropX(Number(e.target.value))}
+                    className="w-full accent-[#C19A6B]"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex justify-between text-[#F0F0E8]/50 mb-1.5">
+                    <span>Posisi Vertikal (Y)</span>
+                    <span className="text-[#C19A6B]">{cropY}%</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    step="0.5"
+                    value={cropY}
+                    onChange={(e) => setCropY(Number(e.target.value))}
+                    className="w-full accent-[#C19A6B]"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex justify-between text-[#F0F0E8]/50 mb-1.5">
+                    <span>Ukuran Kotak (Size)</span>
+                    <span className="text-[#C19A6B]">{cropSize}%</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="5"
+                    max="100"
+                    step="0.5"
+                    value={cropSize}
+                    onChange={(e) => setCropSize(Number(e.target.value))}
+                    className="w-full accent-[#C19A6B]"
+                  />
+                </div>
+              </div>
+
+              {/* Live Cropped Icon Preview */}
+              <div className="bg-[#0F0F0F] p-4 border border-[#2A2A2A] flex items-center justify-between gap-4">
+                <div className="space-y-1">
+                  <span className="text-[10px] text-[#F0F0E8]/40 block uppercase tracking-widest font-mono">Pratinjau Hasil Pangkas</span>
+                  <p className="text-xs text-emerald-400 font-mono">120x120px Auto-Render</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <CropPreviewHelper
+                    src={cropSourceImage}
+                    x={cropX}
+                    y={cropY}
+                    size={cropSize}
+                    onPreviewGenerated={setCropLivePreview}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex justify-end gap-3 border-t border-[#2A2A2A] pt-4">
+              <button
+                type="button"
+                onClick={() => setShowCropModal(false)}
+                className="bg-transparent hover:bg-[#2A2A2A] text-[#F0F0E8]/60 font-bold py-2 px-4 rounded-none text-xs uppercase tracking-wider cursor-pointer border border-[#2A2A2A]"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (cropCallback && cropLivePreview) {
+                    cropCallback(cropLivePreview);
+                  }
+                  setShowCropModal(false);
+                  alert("Icon berhasil dipangkas!");
+                }}
+                className="bg-[#C19A6B] hover:bg-[#A98458] text-[#0F0F0F] font-bold py-2 px-5 rounded-none text-xs uppercase tracking-wider cursor-pointer border border-[#C19A6B]"
+              >
+                Gunakan Hasil Pangkas
+              </button>
+            </div>
           </div>
         </div>
       )}

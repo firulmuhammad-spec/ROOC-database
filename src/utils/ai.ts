@@ -14,10 +14,7 @@ export async function runAIScan(
   onStatusUpdate: (status: string) => void
 ): Promise<ScanResult> {
   const models = [
-    "gemini-2.5-pro",
-    "gemini-2.5-flash",
-    "gemini-1.5-pro",
-    "gemini-1.5-flash"
+    "gemini-3.5-flash"
   ];
 
   for (let i = 0; i < models.length; i++) {

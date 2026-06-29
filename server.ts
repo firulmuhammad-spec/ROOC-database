@@ -29,7 +29,7 @@ async function startServer() {
       }
 
       // Default model if not specified
-      const selectedModel = model || "gemini-2.5-flash";
+      const selectedModel = model || "gemini-3.5-flash";
 
       // Parse image base64 and mime-type
       let mimeType = "image/jpeg";
@@ -44,18 +44,33 @@ async function startServer() {
       let promptText = "";
       if (type === "skill") {
         promptText = `
-This is an image/screenshot from the game Ragnarok Origin Classic (ROOC).
-Analyze this image and extract information about the skill. 
+This is an image/screenshot of a skill card from the game Ragnarok Origin Classic (ROOC).
+Analyze this image and extract information about the skill carefully. 
 Translate or keep names and descriptions in Indonesian/English as found in ROOC.
+
+IMPORTANT INSTRUCTIONS FOR SKILL TITLE & LEVEL SEPARATION:
+- The skill title in the image has the format "Name Lv.X" (e.g., "Amp Lv.5", "Gypsy's Kiss Lv.10", "Lullaby Lv.1", "Blitz Beat Lv.10").
+- You MUST separate this into two fields:
+  1. "name": The clean skill name ONLY, without the level suffix (e.g., "Amp", "Gypsy's Kiss", "Lullaby", "Blitz Beat").
+  2. "level": The skill level string exactly as shown (e.g., "Lv.5", "Lv.10", "Lv.1").
+
+IMPORTANT INSTRUCTIONS FOR ALTERNATIVE DESCRIPTIONS:
+- Look at the main description block. Some skills have a main description (usually in dark blue/black font) followed by an alternative/additional description text (which is smaller, colored in lighter grey/muted grey font, e.g., "This skill costs 2 SP per sec...", "Commands the falcon to...", "MATK carries 4 times refined...").
+- Extract this grey, smaller-font, muted secondary description text into the "alternativeDescription" field.
+- Keep the primary description text (darker text, active/passive formula details) in the "description" field.
+- If there is no such grey secondary description text, leave "alternativeDescription" as an empty string "".
+
 You must return a valid JSON object with the following fields:
 {
-  "name": "Skill Name",
+  "name": "Clean Skill Name (without Lv.X suffix)",
+  "level": "e.g., Lv.5 or Lv.10",
   "type": "PDMG" or "MDMG" or "Support" or "Passive",
   "percentage": "e.g., 250% or +15%",
   "cooldown": "e.g., 1.5s or None",
   "castTime": "e.g., Instant or 0.5s",
   "spCost": "e.g., 30 SP",
-  "description": "Short explanation of skill effects, e.g., 'Memberikan physical damage ke musuh...'"
+  "description": "Primary explanation of skill effects (usually dark text)",
+  "alternativeDescription": "Secondary greyed-out smaller text explanation of alternative mechanics, or empty string if not present"
 }
 Do NOT include markdown wrapping (like \`\`\`json) or any explanation. Return strictly only the raw JSON.
 `;

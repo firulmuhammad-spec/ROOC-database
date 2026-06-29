@@ -24,7 +24,7 @@ service cloud.firestore {
     function isValidSkill(data) {
       return data.keys().hasAll(['name', 'type', 'percentage', 'cooldown', 'castTime', 'spCost', 'description'])
         && data.keys().size() >= 7 
-        && data.keys().size() <= 10
+        && data.keys().size() <= 12
         && data.name is string && data.name.size() > 0 && data.name.size() <= 150
         && data.type is string && (data.type == 'PDMG' || data.type == 'MDMG' || data.type == 'Support' || data.type == 'Passive')
         && data.percentage is string && data.percentage.size() > 0 && data.percentage.size() <= 50
@@ -32,6 +32,8 @@ service cloud.firestore {
         && data.castTime is string && data.castTime.size() > 0 && data.castTime.size() <= 50
         && data.spCost is string && data.spCost.size() > 0 && data.spCost.size() <= 50
         && data.description is string && data.description.size() > 0 && data.description.size() <= 5000
+        && (!data.keys().hasAny(['level']) || (data.level is string && data.level.size() <= 50))
+        && (!data.keys().hasAny(['alternativeDescription']) || (data.alternativeDescription is string && data.alternativeDescription.size() <= 5000))
         && (!data.keys().hasAny(['job']) || (data.job is string && data.job.size() <= 100))
         && (!data.keys().hasAny(['imageBase64']) || (data.imageBase64 is string && data.imageBase64.size() <= 2000000))
         && (!data.keys().hasAny(['createdAt']) || (data.createdAt is number));
