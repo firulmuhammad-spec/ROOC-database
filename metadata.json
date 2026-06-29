@@ -1,0 +1,6 @@
+{
+  "name": "Ragnarok Origin Classic Database",
+  "description": "Database Komunitas Ragnarok Origin Classic (ROOC) lengkap dengan database Skills, Cards, Maps, MVP/Mini Spawn, Patch Notes, dan Kalkulator Damage bertenaga AI Scanner.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

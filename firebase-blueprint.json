@@ -1,0 +1,110 @@
+{
+  "entities": {
+    "Skill": {
+      "title": "Skill",
+      "description": "Ragnarok Origin Classic character skill definition",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Name of the skill" },
+        "type": { "type": "string", "enum": ["PDMG", "MDMG", "Support", "Passive"], "description": "Type of skill" },
+        "percentage": { "type": "string", "description": "Damage multiplier percentage" },
+        "cooldown": { "type": "string", "description": "Skill cooldown duration" },
+        "castTime": { "type": "string", "description": "Skill cast time duration" },
+        "spCost": { "type": "string", "description": "SP cost of casting" },
+        "description": { "type": "string", "description": "Detailed description of the skill" },
+        "job": { "type": "string", "description": "Job class of the skill" },
+        "imageBase64": { "type": "string", "description": "Base64 encoded icon / image of the skill" },
+        "createdAt": { "type": "number", "description": "Creation timestamp" }
+      },
+      "required": ["name", "type", "percentage", "cooldown", "castTime", "spCost", "description"]
+    },
+    "Patch": {
+      "title": "Patch",
+      "description": "Ragnarok Origin Classic news or patch notes update",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "description": "Title of the patch release" },
+        "date": { "type": "string", "description": "Date of publication" },
+        "content": { "type": "string", "description": "Detailed explanation of the release" },
+        "tags": { "type": "array", "description": "Tags associated with the patch" },
+        "author": { "type": "string", "description": "Author or publisher of the patch" },
+        "imageBase64": { "type": "string", "description": "Base64 encoded banner image" },
+        "createdAt": { "type": "number", "description": "Creation timestamp" }
+      },
+      "required": ["title", "date", "content", "author"]
+    },
+    "MapData": {
+      "title": "MapData",
+      "description": "Ragnarok Origin Classic region map metadata",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Name of the map" },
+        "minLevel": { "type": "number", "description": "Recommended minimum level" },
+        "monsterList": { "type": "array", "description": "List of monsters spawn on this map" },
+        "description": { "type": "string", "description": "Detailed description of environment and lore" },
+        "imageBase64": { "type": "string", "description": "Base64 encoded map illustration" },
+        "createdAt": { "type": "number", "description": "Creation timestamp" }
+      },
+      "required": ["name", "minLevel", "monsterList", "description"]
+    },
+    "CardData": {
+      "title": "CardData",
+      "description": "Ragnarok Origin Classic card equip item",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Name of the card" },
+        "slot": { "type": "string", "description": "Slot where the card is inserted" },
+        "effect": { "type": "string", "description": "Detailed passive effect" },
+        "stats": { "type": "string", "description": "Summary stats" },
+        "sourceMonster": { "type": "string", "description": "Drop source monster name" },
+        "lvl5Effect": { "type": "string", "description": "Lvl 5 upgrade effect" },
+        "lvl10Effect": { "type": "string", "description": "Lvl 10 upgrade effect" },
+        "lvl15Effect": { "type": "string", "description": "Lvl 15 upgrade effect" },
+        "imageBase64": { "type": "string", "description": "Base64 encoded illustration" },
+        "createdAt": { "type": "number", "description": "Creation timestamp" }
+      },
+      "required": ["name", "slot", "effect", "stats", "sourceMonster"]
+    },
+    "BossData": {
+      "title": "BossData",
+      "description": "Ragnarok Origin Classic boss monster definition",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Name of the boss" },
+        "type": { "type": "string", "enum": ["MVP", "Mini"], "description": "Class or type of boss" },
+        "level": { "type": "number", "description": "Level of the boss" },
+        "element": { "type": "string", "description": "Elemental attribute" },
+        "race": { "type": "string", "description": "Monster race classification" },
+        "size": { "type": "string", "description": "Size of the boss" },
+        "spawnTime": { "type": "string", "description": "Spawn interval timer" },
+        "location": { "type": "string", "description": "Primary spawn location map" },
+        "drops": { "type": "array", "description": "Key items dropped by the boss" },
+        "imageBase64": { "type": "string", "description": "Base64 encoded boss photo" },
+        "createdAt": { "type": "number", "description": "Creation timestamp" }
+      },
+      "required": ["name", "type", "level", "element", "race", "size", "spawnTime", "location", "drops"]
+    }
+  },
+  "firestore": {
+    "/skills/{skillId}": {
+      "schema": { "$ref": "#/entities/Skill" },
+      "description": "Collection of community-compiled skill entries"
+    },
+    "/new_patches/{patchId}": {
+      "schema": { "$ref": "#/entities/Patch" },
+      "description": "Collection of community news and patch updates"
+    },
+    "/maps/{mapId}": {
+      "schema": { "$ref": "#/entities/MapData" },
+      "description": "Collection of maps and regions information"
+    },
+    "/cards/{cardId}": {
+      "schema": { "$ref": "#/entities/CardData" },
+      "description": "Collection of equipment cards info"
+    },
+    "/mvps/{mvpId}": {
+      "schema": { "$ref": "#/entities/BossData" },
+      "description": "Collection of MVP and Mini bosses details"
+    }
+  }
+}

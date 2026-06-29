@@ -1,0 +1,133 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Global Safety Net default-deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Global ID poisoning guard
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming(req) {
+      return req.resource.data;
+    }
+
+    function existing(res) {
+      return res.data;
+    }
+
+    // Validator for Skill
+    function isValidSkill(data) {
+      return data.keys().hasAll(['name', 'type', 'percentage', 'cooldown', 'castTime', 'spCost', 'description'])
+        && data.keys().size() >= 7 
+        && data.keys().size() <= 10
+        && data.name is string && data.name.size() > 0 && data.name.size() <= 150
+        && data.type is string && (data.type == 'PDMG' || data.type == 'MDMG' || data.type == 'Support' || data.type == 'Passive')
+        && data.percentage is string && data.percentage.size() > 0 && data.percentage.size() <= 50
+        && data.cooldown is string && data.cooldown.size() > 0 && data.cooldown.size() <= 50
+        && data.castTime is string && data.castTime.size() > 0 && data.castTime.size() <= 50
+        && data.spCost is string && data.spCost.size() > 0 && data.spCost.size() <= 50
+        && data.description is string && data.description.size() > 0 && data.description.size() <= 5000
+        && (!data.keys().hasAny(['job']) || (data.job is string && data.job.size() <= 100))
+        && (!data.keys().hasAny(['imageBase64']) || (data.imageBase64 is string && data.imageBase64.size() <= 2000000))
+        && (!data.keys().hasAny(['createdAt']) || (data.createdAt is number));
+    }
+
+    // Validator for Patch
+    function isValidPatch(data) {
+      return data.keys().hasAll(['title', 'date', 'content', 'author'])
+        && data.keys().size() >= 4 
+        && data.keys().size() <= 7
+        && data.title is string && data.title.size() > 0 && data.title.size() <= 200
+        && data.date is string && data.date.size() > 0 && data.date.size() <= 30
+        && data.content is string && data.content.size() > 0 && data.content.size() <= 10000
+        && data.author is string && data.author.size() > 0 && data.author.size() <= 100
+        && (!data.keys().hasAny(['tags']) || (data.tags is list && data.tags.size() <= 20))
+        && (!data.keys().hasAny(['imageBase64']) || (data.imageBase64 is string && data.imageBase64.size() <= 2000000))
+        && (!data.keys().hasAny(['createdAt']) || (data.createdAt is number));
+    }
+
+    // Validator for MapData
+    function isValidMap(data) {
+      return data.keys().hasAll(['name', 'minLevel', 'monsterList', 'description'])
+        && data.keys().size() >= 4 
+        && data.keys().size() <= 6
+        && data.name is string && data.name.size() > 0 && data.name.size() <= 150
+        && data.minLevel is number && data.minLevel >= 1 && data.minLevel <= 150
+        && data.monsterList is list && data.monsterList.size() <= 50
+        && data.description is string && data.description.size() > 0 && data.description.size() <= 5000
+        && (!data.keys().hasAny(['imageBase64']) || (data.imageBase64 is string && data.imageBase64.size() <= 2000000))
+        && (!data.keys().hasAny(['createdAt']) || (data.createdAt is number));
+    }
+
+    // Validator for CardData
+    function isValidCard(data) {
+      return data.keys().hasAll(['name', 'slot', 'effect', 'stats', 'sourceMonster'])
+        && data.keys().size() >= 5 
+        && data.keys().size() <= 11
+        && data.name is string && data.name.size() > 0 && data.name.size() <= 150
+        && data.slot is string && data.slot.size() > 0 && data.slot.size() <= 100
+        && data.effect is string && data.effect.size() > 0 && data.effect.size() <= 2000
+        && data.stats is string && data.stats.size() > 0 && data.stats.size() <= 250
+        && data.sourceMonster is string && data.sourceMonster.size() > 0 && data.sourceMonster.size() <= 150
+        && (!data.keys().hasAny(['lvl5Effect']) || (data.lvl5Effect is string && data.lvl5Effect.size() <= 500))
+        && (!data.keys().hasAny(['lvl10Effect']) || (data.lvl10Effect is string && data.lvl10Effect.size() <= 500))
+        && (!data.keys().hasAny(['lvl15Effect']) || (data.lvl15Effect is string && data.lvl15Effect.size() <= 500))
+        && (!data.keys().hasAny(['imageBase64']) || (data.imageBase64 is string && data.imageBase64.size() <= 2000000))
+        && (!data.keys().hasAny(['createdAt']) || (data.createdAt is number));
+    }
+
+    // Validator for BossData
+    function isValidBoss(data) {
+      return data.keys().hasAll(['name', 'type', 'level', 'element', 'race', 'size', 'spawnTime', 'location', 'drops'])
+        && data.keys().size() >= 9 
+        && data.keys().size() <= 11
+        && data.name is string && data.name.size() > 0 && data.name.size() <= 150
+        && data.type is string && (data.type == 'MVP' || data.type == 'Mini')
+        && data.level is number && data.level >= 1 && data.level <= 150
+        && data.element is string && data.element.size() > 0 && data.element.size() <= 50
+        && data.race is string && data.race.size() > 0 && data.race.size() <= 50
+        && data.size is string && (data.size == 'Small' || data.size == 'Medium' || data.size == 'Large')
+        && data.spawnTime is string && data.spawnTime.size() > 0 && data.spawnTime.size() <= 50
+        && data.location is string && data.location.size() > 0 && data.location.size() <= 150
+        && data.drops is list && data.drops.size() <= 50
+        && (!data.keys().hasAny(['imageBase64']) || (data.imageBase64 is string && data.imageBase64.size() <= 2000000))
+        && (!data.keys().hasAny(['createdAt']) || (data.createdAt is number));
+    }
+
+    // Collection match rules
+    match /skills/{skillId} {
+      allow read: if true;
+      allow create, update: if isValidSkill(incoming(request));
+      allow delete: if true;
+    }
+
+    match /new_patches/{patchId} {
+      allow read: if true;
+      allow create, update: if isValidPatch(incoming(request));
+      allow delete: if true;
+    }
+
+    match /maps/{mapId} {
+      allow read: if true;
+      allow create, update: if isValidMap(incoming(request));
+      allow delete: if true;
+    }
+
+    match /cards/{cardId} {
+      allow read: if true;
+      allow create, update: if isValidCard(incoming(request));
+      allow delete: if true;
+    }
+
+    match /mvps/{mvpId} {
+      allow read: if true;
+      allow create, update: if isValidBoss(incoming(request));
+      allow delete: if true;
+    }
+  }
+}
