@@ -14,7 +14,9 @@ const firebaseConfig = {
 // Initialize Firebase App
 const app = initializeApp(firebaseConfig);
 
-// Initialize Firestore with the specific database ID provided
-export const db = getFirestore(app, "ai-studio-8e8374b0-be80-45a3-9fe9-b31a18395cbe");
+// Initialize Firestore with the specific database ID provided and ignore undefined properties
+export const db = initializeFirestore(app, {
+  ignoreUndefinedProperties: true
+}, "ai-studio-8e8374b0-be80-45a3-9fe9-b31a18395cbe");
 
 export default app;
